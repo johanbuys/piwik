@@ -235,11 +235,11 @@ class ArchiveSelector
             // select blobs w/ name like "$name_[0-9]+" w/o using RLIKE
             $nameEnd = strlen($name) + 2;
             $whereNameIs = "(name = ?
-                            OR name = ?
+                            OR name LIKE ?
                             OR (name LIKE ?
                                  AND SUBSTRING(name, $nameEnd, 1) >= '0'
                                  AND SUBSTRING(name, $nameEnd, 1) <= '9') )";
-            $bind = array($name, $name . '_' . Archive::ARCHIVE_APPENDIX_SUBTABLES, $name . '%');
+            $bind = array($name, $name . '_' . Archive::ARCHIVE_APPENDIX_SUBTABLES . '%', $name . '%');
         } else {
             $whereNameIs = "name IN ($inNames)";
             $bind = array_values($recordNames);

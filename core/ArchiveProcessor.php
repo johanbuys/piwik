@@ -319,6 +319,12 @@ class ArchiveProcessor
         $this->archiveWriter->insertRecord($name, $value);
     }
 
+    public function insertTable($recordName, DataTable $table, $maxRows, $maxRowsSubtable, $columnToSortBeforeTruncation)
+    {
+        $report = $table->getSerialized($maxRows, $maxRowsSubtable, $columnToSortBeforeTruncation);
+        $this->insertBlobRecord($recordName, $report);
+    }
+
     /**
      * Caches one or more blob records in the archive for this processor's site, period
      * and segment.
@@ -341,7 +347,17 @@ class ArchiveProcessor
         }
 
         if (!empty($values)) {
-            $newInsert[Archive::ARCHIVE_APPENDIX_SUBTABLES] = serialize($values);
+            $subtableMap = array();
+            foreach ($values as $subtableId => $subtable) {
+                $index = $this->getArchive()->getContainerForSubtableId($subtableId);
+                if (!array_key_exists($index, $subtableMap)) {
+                    $subtableMap[$index] = array();
+                }
+                $subtableMap[$index][$subtableId] = $subtable;
+            }
+            foreach ($subtableMap as $index => $subtables) {
+                $newInsert[$index] = serialize($subtables);
+            }
         }
 
         $this->archiveWriter->insertBlobRecord($name, $newInsert);

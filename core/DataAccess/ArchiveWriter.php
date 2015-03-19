@@ -87,7 +87,7 @@ class ArchiveWriter
                 // for example for the Table of searchEngines we keep the name 'referrer_search_engine'
                 // but for the child table of 'Google' which has the ID = 9 the name would be 'referrer_search_engine_9'
                 $newName = $name;
-                if ($id != 0 || $id === Archive::ARCHIVE_APPENDIX_SUBTABLES) {
+                if ($id != 0 || strpos($id, Archive::ARCHIVE_APPENDIX_SUBTABLES) === 0) {
                     //FIXMEA: refactor
                     $newName = $name . '_' . $id;
                 }

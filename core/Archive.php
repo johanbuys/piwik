@@ -582,6 +582,12 @@ class Archive
         Site::clearCache();
     }
 
+    public function getContainerForSubtableId($subtableId)
+    {
+        $chunk = (floor($subtableId / 199));
+        return self::ARCHIVE_APPENDIX_SUBTABLES . '_' . $chunk;
+    }
+
     /**
      * Queries archive tables for data and returns the result.
      * @param array|string $archiveNames
@@ -603,7 +609,7 @@ class Archive
         ) {
             foreach ($archiveNames as &$name) {
                 // to be backwards compatibe we need to look for the exact idSubtable blob and for the blob that stores all subtables combined
-                $subtables[] = $this->appendIdSubtable($name, self::ARCHIVE_APPENDIX_SUBTABLES);
+                $subtables[] = $this->appendIdSubtable($name, $this->getContainerForSubtableId($idSubtable));
                 $name = $this->appendIdsubtable($name, $idSubtable);
             }
         }
@@ -638,10 +644,11 @@ class Archive
 
             $resultRow = & $result->get($idSite, $periodStr);
 
-            if (Common::stringEndsWith($row['name'], '_' . self::ARCHIVE_APPENDIX_SUBTABLES)) {
+            $posSub = strpos($row['name'], '_' . self::ARCHIVE_APPENDIX_SUBTABLES);
+            if (false !== $posSub) {
                 // one combined blob for all subtables
                 $value   = unserialize($value);
-                $rawName = substr($row['name'], 0, -1 * strlen(self::ARCHIVE_APPENDIX_SUBTABLES));
+                $rawName = substr($row['name'], 0, $posSub + 1); // +1 == for '_'
                 // $rawName = eg PluginName_ArchiveName_
 
                 if ($idSubtable === self::ID_SUBTABLE_LOAD_ALL_SUBTABLES && is_array($value)) {

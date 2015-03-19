@@ -627,6 +627,7 @@ class DataTable implements DataTableInterface, \IteratorAggregate, \ArrayAccess
         }
 
         $label = (string)$label;
+
         if (!isset($this->rowsIndexByLabel[$label])) {
             return false;
         }
@@ -663,6 +664,7 @@ class DataTable implements DataTableInterface, \IteratorAggregate, \ArrayAccess
                 $this->rowsIndexByLabel[$label] = $id;
             }
         }
+
         $this->indexNotUpToDate = false;
     }
 
@@ -1186,6 +1188,7 @@ class DataTable implements DataTableInterface, \IteratorAggregate, \ArrayAccess
                                   $columnToSortByBeforeTruncation = null)
     {
         static $depth = 0;
+        static $subtableId = 0;
 
         if ($depth > self::$maximumDepthLevelAllowed) {
             $depth = 0;
@@ -1200,33 +1203,45 @@ class DataTable implements DataTableInterface, \IteratorAggregate, \ArrayAccess
             );
         }
 
+        $originalSubtableIds = array();
+        $forcedId = $subtableId;
+
         // For each row, get the serialized row
         // If it is associated to a sub table, get the serialized table recursively ;
         // but returns all serialized tables and subtable in an array of 1 dimension
         $aSerializedDataTable = array();
-        foreach ($this->rows as $row) {
+        foreach ($this->rows as $id => $row) {
             $subTable = $row->getSubtable();
             if ($subTable) {
+                $originalSubtableIds[$id] = $subTable->getId();
+
+                $subtableId++;
+                $row->c[Row::DATATABLE_ASSOCIATED] = -1 * $subtableId;
                 $depth++;
                 $aSerializedDataTable = $aSerializedDataTable + $subTable->getSerialized($maximumRowsInSubDataTable, $maximumRowsInSubDataTable, $columnToSortByBeforeTruncation);
+
                 $depth--;
             } else {
                 $row->removeSubtable();
             }
         }
-        // we load the current Id of the DataTable
-        $forcedId = $this->getId();
 
         // if the datatable is the parent we force the Id at 0 (this is part of the specification)
         if ($depth == 0) {
             $forcedId = 0;
+            $subtableId = 0;
         }
 
         // we then serialize the rows and store them in the serialized dataTable
         $addToRows = array(self::ID_SUMMARY_ROW => $this->summaryRow);
 
         $aSerializedDataTable[$forcedId] = serialize($this->rows + $addToRows);
-        foreach ($this->rows as &$row) {
+        foreach ($this->rows as $id => $row) {
+            // we need to restore the original ids otherwise they cannot be found in the DataTable\Manager and memory
+            // cannot be freed otherwise
+            if (array_key_exists($id, $originalSubtableIds)) {
+                $row->c[Row::DATATABLE_ASSOCIATED] = -1 * $originalSubtableIds[$id];
+            }
             $row->cleanPostSerialize();
         }
 
