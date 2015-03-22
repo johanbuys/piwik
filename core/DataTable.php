@@ -1233,16 +1233,18 @@ class DataTable implements DataTableInterface, \IteratorAggregate, \ArrayAccess
         }
 
         // we then serialize the rows and store them in the serialized dataTable
-        $addToRows = array(self::ID_SUMMARY_ROW => $this->summaryRow);
-
-        $aSerializedDataTable[$forcedId] = serialize($this->rows + $addToRows);
+        $rows = array();
         foreach ($this->rows as $id => $row) {
-            // we need to restore the original ids otherwise they cannot be found in the DataTable\Manager and memory
-            // cannot be freed otherwise
+            $rows[$id] = $row->toArray();
             if (array_key_exists($id, $originalSubtableIds)) {
                 $row->subtableId = $originalSubtableIds[$id];
             }
         }
+        if (isset($this->summaryRow)) {
+            $rows[self::ID_SUMMARY_ROW] = $this->summaryRow->toArray();
+        }
+
+        $aSerializedDataTable[$forcedId] = serialize($rows);
 
         return $aSerializedDataTable;
     }

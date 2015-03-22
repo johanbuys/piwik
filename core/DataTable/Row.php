@@ -76,11 +76,17 @@ class Row implements \ArrayAccess, \IteratorAggregate
         }
     }
 
+    public function toArray()
+    {
+        return array(
+            self::COLUMNS => $this->columns,
+            self::METADATA => $this->metadata,
+            self::DATATABLE_ASSOCIATED => $this->subtableId,
+        );
+    }
+
     /**
-     * Because $this->c[self::DATATABLE_ASSOCIATED] is negative when the table is in memory,
-     * we must prior to serialize() call, make sure the ID is saved as positive integer
-     *
-     * Only serialize the "c" member
+     * Only serialize the "columns, metadata and subtableId" member
      * @ignore
      */
     public function __sleep()
