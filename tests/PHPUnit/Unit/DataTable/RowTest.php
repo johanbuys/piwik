@@ -129,7 +129,7 @@ class RowTest extends \PHPUnit_Framework_TestCase
 
         $subTable = $this->getTestSubDataTable();
         $testRow->setSubtable($subTable);
-        $testRow->switchFlagSubtableIsLoaded();
+       // $testRow->switchFlagSubtableIsLoaded();
         $this->assertFalse( $testRow->isSubtableLoaded() );
 
         $testRow->sumSubtable($subTable);

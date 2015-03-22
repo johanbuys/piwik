@@ -1216,7 +1216,7 @@ class DataTable implements DataTableInterface, \IteratorAggregate, \ArrayAccess
                 $originalSubtableIds[$id] = $subTable->getId();
 
                 $subtableId++;
-                $row->c[Row::DATATABLE_ASSOCIATED] = -1 * $subtableId;
+                $row->subtableId = $subtableId;
                 $depth++;
                 $aSerializedDataTable = $aSerializedDataTable + $subTable->getSerialized($maximumRowsInSubDataTable, $maximumRowsInSubDataTable, $columnToSortByBeforeTruncation);
 
@@ -1240,9 +1240,8 @@ class DataTable implements DataTableInterface, \IteratorAggregate, \ArrayAccess
             // we need to restore the original ids otherwise they cannot be found in the DataTable\Manager and memory
             // cannot be freed otherwise
             if (array_key_exists($id, $originalSubtableIds)) {
-                $row->c[Row::DATATABLE_ASSOCIATED] = -1 * $originalSubtableIds[$id];
+                $row->subtableId = $originalSubtableIds[$id];
             }
-            $row->cleanPostSerialize();
         }
 
         return $aSerializedDataTable;
