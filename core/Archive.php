@@ -584,7 +584,7 @@ class Archive
 
     public function getContainerForSubtableId($subtableId)
     {
-        $chunk = (floor($subtableId / 199));
+        $chunk = (floor($subtableId / 99));
         return self::ARCHIVE_APPENDIX_SUBTABLES . '_' . $chunk;
     }
 

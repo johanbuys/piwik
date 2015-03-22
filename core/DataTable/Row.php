@@ -72,6 +72,8 @@ class Row implements \ArrayAccess, \IteratorAggregate
         if (isset($row[self::DATATABLE_ASSOCIATED])) {
             if ($row[self::DATATABLE_ASSOCIATED] instanceof DataTable) {
                 $this->setSubtable($row[self::DATATABLE_ASSOCIATED]);
+            } else {
+                $this->subtableId = $row[self::DATATABLE_ASSOCIATED];
             }
         }
     }
