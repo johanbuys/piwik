@@ -104,13 +104,18 @@ class ColumnDelete extends BaseFilter
             foreach ($table as $index => $row) {
                 foreach ($this->columnsToRemove as $column) {
                     if ($this->deleteIfZeroOnly) {
+                        if (!isset($row[$column])) {
+                            continue;
+                        }
                         $value = $row[$column];
                         if ($value === false || !empty($value)) {
                             continue;
                         }
                     }
 
-                    unset($table[$index][$column]);
+                    if (isset($table[$index][$column])) {
+                        unset($table[$index][$column]);
+                    }
                 }
             }
 
@@ -120,6 +125,7 @@ class ColumnDelete extends BaseFilter
         // remove columns not specified in $columnsToKeep
         if (!empty($this->columnsToKeep)) {
             foreach ($table as $index => $row) {
+                $columnsToDelete = array();
                 foreach ($row as $name => $value) {
 
                     $keep = false;
@@ -134,8 +140,13 @@ class ColumnDelete extends BaseFilter
                         && $name != 'label' // label cannot be removed via whitelisting
                         && !isset($this->columnsToKeep[$name])
                     ) {
-                        unset($table[$index][$name]);
+                        // we cannot remove row directly to prevent notice "ArrayIterator::next(): Array was modified
+                        // outside object and internal position is no longer valid in /var/www..."
+                        $columnsToDelete[] = $name;
                     }
+                }
+                foreach ($columnsToDelete as $columnToDelete) {
+                    unset($table[$index][$columnToDelete]);
                 }
             }
 

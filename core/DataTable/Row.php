@@ -22,7 +22,7 @@ use Piwik\Metrics;
  *
  * @api
  */
-class Row implements \ArrayAccess, \IteratorAggregate
+class Row extends \ArrayObject
 {
     /**
      * List of columns that cannot be summed. An associative array for speed.
@@ -37,7 +37,7 @@ class Row implements \ArrayAccess, \IteratorAggregate
     // @see sumRow - implementation detail
     public $maxVisitsSummed = 0;
 
-    public $columns = array();
+   // public $columns = array();
     public $metadata = array();
     public $subtableId = null;
     public $subtableIsLoaded = false;
@@ -64,7 +64,7 @@ class Row implements \ArrayAccess, \IteratorAggregate
     public function __construct($row = array())
     {
         if (isset($row[self::COLUMNS])) {
-            $this->columns = $row[self::COLUMNS];
+            parent::__construct($row[self::COLUMNS]);
         }
         if (isset($row[self::METADATA])) {
             $this->metadata = $row[self::METADATA];
@@ -81,27 +81,18 @@ class Row implements \ArrayAccess, \IteratorAggregate
     public function toArray()
     {
         return array(
-            self::COLUMNS => $this->columns,
+            self::COLUMNS => $this->getArrayCopy(),
             self::METADATA => $this->metadata,
             self::DATATABLE_ASSOCIATED => $this->subtableId,
         );
     }
 
-    /**
-     * Only serialize the "columns, metadata and subtableId" member
-     * @ignore
-     */
-    public function __sleep()
-    {
-        return array('columns', 'metadata', 'subtableId');
-    }
-
     public function __wakeup()
     {
-        if (isset($this->c)) {
-            $this->columns = $this->c[self::COLUMNS];
-            $this->metadata = $this->c[self::METADATA];
-            $this->subtableId = $this->c[self::DATATABLE_ASSOCIATED];
+        if (isset($this['c'])) {
+            $this->metadata   = $this['c'][self::METADATA];
+            $this->subtableId = $this['c'][self::DATATABLE_ASSOCIATED];
+            $this->exchangeArray($this['c'][self::COLUMNS]);
         }
     }
 
@@ -152,10 +143,11 @@ class Row implements \ArrayAccess, \IteratorAggregate
      */
     public function deleteColumn($name)
     {
-        if (!$this->hasColumn($name)) {
+        if (!isset($this[$name])) {
             return false;
         }
-        unset($this->columns[$name]);
+
+        unset($this[$name]);
         return true;
     }
 
@@ -167,11 +159,15 @@ class Row implements \ArrayAccess, \IteratorAggregate
      */
     public function renameColumn($oldName, $newName)
     {
-        if (isset($this->columns[$oldName])) {
-            $this->columns[$newName] = $this->columns[$oldName];
+        if (isset($this[$oldName])) {
+            $this[$newName] = $this[$oldName];
+            unset($this[$oldName]);
+            return;
         }
+
         // outside the if () since we want to delete nulled columns
-        unset($this->columns[$oldName]);
+        $this[$oldName] = null; // prevent possible notice $oldName is not defined, should be fast
+        unset($this[$oldName]);
     }
 
     /**
@@ -182,11 +178,11 @@ class Row implements \ArrayAccess, \IteratorAggregate
      */
     public function getColumn($name)
     {
-        if (!isset($this->columns[$name])) {
+        if (!isset($this[$name])) {
             return false;
         }
 
-        return $this->columns[$name];
+        return $this[$name];
     }
 
     /**
@@ -215,7 +211,7 @@ class Row implements \ArrayAccess, \IteratorAggregate
      */
     public function hasColumn($name)
     {
-        return array_key_exists($name, $this->columns);
+        return $this->offsetExists($name);
     }
 
     /**
@@ -231,7 +227,7 @@ class Row implements \ArrayAccess, \IteratorAggregate
      */
     public function getColumns()
     {
-        return $this->columns;
+        return $this->getArrayCopy();
     }
 
     /**
@@ -328,7 +324,7 @@ class Row implements \ArrayAccess, \IteratorAggregate
      */
     public function setColumns($columns)
     {
-        $this->columns = $columns;
+        $this->exchangeArray($columns);
     }
 
     /**
@@ -339,7 +335,7 @@ class Row implements \ArrayAccess, \IteratorAggregate
      */
     public function setColumn($name, $value)
     {
-        $this->columns[$name] = $value;
+        $this[$name] = $value;
     }
 
     /**
@@ -381,7 +377,7 @@ class Row implements \ArrayAccess, \IteratorAggregate
      */
     public function addColumn($name, $value)
     {
-        if (isset($this->columns[$name])) {
+        if (isset($this[$name])) {
             throw new Exception("Column $name already in the array!");
         }
         $this->setColumn($name, $value);
@@ -444,7 +440,7 @@ class Row implements \ArrayAccess, \IteratorAggregate
      */
     public function sumRow(Row $rowToSum, $enableCopyMetadata = true, $aggregationOperations = false)
     {
-        foreach ($rowToSum->getColumns() as $columnToSumName => $columnToSumValue) {
+        foreach ($rowToSum as $columnToSumName => $columnToSumValue) {
             if (!$this->isSummableColumn($columnToSumName)) {
                 continue;
             }
@@ -655,30 +651,6 @@ class Row implements \ArrayAccess, \IteratorAggregate
             }
         }
         return true;
-    }
-
-    public function offsetExists($offset)
-    {
-        return $this->hasColumn($offset);
-    }
-
-    public function offsetGet($offset)
-    {
-        return $this->getColumn($offset);
-    }
-
-    public function offsetSet($offset, $value)
-    {
-        $this->setColumn($offset, $value);
-    }
-
-    public function offsetUnset($offset)
-    {
-        $this->deleteColumn($offset);
-    }
-
-    public function getIterator() {
-        return new \ArrayIterator($this->columns);
     }
 
     private function warnIfSubtableAlreadyExists()
