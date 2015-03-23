@@ -63,17 +63,17 @@ class Row extends \ArrayObject
      */
     public function __construct($row = array())
     {
-        if (isset($row[self::COLUMNS])) {
-            parent::__construct($row[self::COLUMNS]);
+        if (isset($row[0])) { // self::COLUMNS
+            parent::__construct($row[0]);
         }
-        if (isset($row[self::METADATA])) {
-            $this->metadata = $row[self::METADATA];
+        if (isset($row[1])) { // self::METADATA
+            $this->metadata = $row[1];
         }
-        if (isset($row[self::DATATABLE_ASSOCIATED])) {
-            if ($row[self::DATATABLE_ASSOCIATED] instanceof DataTable) {
-                $this->setSubtable($row[self::DATATABLE_ASSOCIATED]);
+        if (isset($row[3])) { // self::DATATABLE_ASSOCIATED
+            if ($row[3] instanceof DataTable) {
+                $this->setSubtable($row[3]);
             } else {
-                $this->subtableId = $row[self::DATATABLE_ASSOCIATED];
+                $this->subtableId = $row[3];
             }
         }
     }
@@ -81,18 +81,18 @@ class Row extends \ArrayObject
     public function toArray()
     {
         return array(
-            self::COLUMNS => $this->getArrayCopy(),
-            self::METADATA => $this->metadata,
-            self::DATATABLE_ASSOCIATED => $this->subtableId,
+            0 => $this->getArrayCopy(), // self::COLUMNS
+            1 => $this->metadata,       // self::METADATA
+            3 => $this->subtableId,     // self::DATATABLE_ASSOCIATED
         );
     }
 
     public function __wakeup()
     {
         if (isset($this['c'])) {
-            $this->metadata   = $this['c'][self::METADATA];
-            $this->subtableId = $this['c'][self::DATATABLE_ASSOCIATED];
-            $this->exchangeArray($this['c'][self::COLUMNS]);
+            $this->metadata   = $this['c'][1];   // self::METADATA
+            $this->subtableId = $this['c'][3];   // self::DATATABLE_ASSOCIATED
+            $this->exchangeArray($this['c'][0]); // self::COLUMNS
         }
     }
 
