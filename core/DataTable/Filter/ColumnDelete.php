@@ -100,22 +100,41 @@ class ColumnDelete extends BaseFilter
         $recurse = false; // only recurse if there are columns to remove/keep
 
         // remove columns specified in $this->columnsToRemove
-        if (!empty($this->columnsToRemove)) {
+        if (!empty($this->columnsToRemove) && is_array($table)) {
             foreach ($table as $index => $row) {
                 foreach ($this->columnsToRemove as $column) {
+                    if (!array_key_exists($column, $row)) {
+                        continue;
+                    }
+                    
                     if ($this->deleteIfZeroOnly) {
-                        if (!isset($row[$column])) {
-                            continue;
-                        }
                         $value = $row[$column];
                         if ($value === false || !empty($value)) {
                             continue;
                         }
                     }
 
-                    if (isset($table[$index][$column])) {
-                        unset($table[$index][$column]);
+                    unset($table[$index][$column]);
+                }
+            }
+
+            $recurse = true;
+
+        } elseif (!empty($this->columnsToRemove)) {
+
+            foreach ($table as $index => $row) {
+                foreach ($this->columnsToRemove as $column) {
+                    if (!$row->offsetExists($column)) {
+                        continue;
                     }
+                    if ($this->deleteIfZeroOnly) {
+                        $value = $row[$column];
+                        if ($value === false || !empty($value)) {
+                            continue;
+                        }
+                    }
+
+                    unset($table[$index][$column]);
                 }
             }
 
