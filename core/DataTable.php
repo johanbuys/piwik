@@ -17,7 +17,6 @@ use Piwik\DataTable\Renderer\Html;
 use Piwik\DataTable\Row;
 use Piwik\DataTable\Row\DataTableSummaryRow;
 use Piwik\DataTable\Simple;
-use Piwik\DataTable\TableNotFoundException;
 use ReflectionClass;
 
 /**
@@ -343,6 +342,16 @@ class DataTable implements DataTableInterface, \IteratorAggregate, \ArrayAccess
             Manager::getInstance()->setTableDeleted($this->currentId);
             $depth--;
         }
+    }
+
+    /**
+     * Clone. Called when cloning the datatable. We need to make sure to create a new datatableId.
+     * If we do not increase tableId it can result in segmentation faults when destructing a datatable.
+     */
+    public function __clone()
+    {
+        // registers this instance to the manager
+        $this->currentId = Manager::getInstance()->addTable($this);
     }
 
     public function setLabelsHaveChanged()
@@ -1195,10 +1204,12 @@ class DataTable implements DataTableInterface, \IteratorAggregate, \ArrayAccess
                                   $columnToSortByBeforeTruncation = null)
     {
         static $depth = 0;
+        // make sure subtableIds are consecutive from 1 to N
         static $subtableId = 0;
 
         if ($depth > self::$maximumDepthLevelAllowed) {
             $depth = 0;
+            $subtableId = 0;
             throw new Exception("Maximum recursion level of " . self::$maximumDepthLevelAllowed . " reached. Maybe you have set a DataTable\Row with an associated DataTable belonging already to one of its parent tables?");
         }
         if (!is_null($maximumRowsInDataTable)) {
@@ -1210,7 +1221,7 @@ class DataTable implements DataTableInterface, \IteratorAggregate, \ArrayAccess
             );
         }
 
-        $originalSubtableIds = array();
+        $consecutiveSubtableIds = array();
         $forcedId = $subtableId;
 
         // For each row, get the serialized row
@@ -1220,13 +1231,9 @@ class DataTable implements DataTableInterface, \IteratorAggregate, \ArrayAccess
         foreach ($this->rows as $id => $row) {
             $subTable = $row->getSubtable();
             if ($subTable) {
-                $originalSubtableIds[$id] = $subTable->getId();
-
-                $subtableId++;
-                $row->subtableId = $subtableId;
+                $consecutiveSubtableIds[$id] = ++$subtableId;
                 $depth++;
                 $aSerializedDataTable = $aSerializedDataTable + $subTable->getSerialized($maximumRowsInSubDataTable, $maximumRowsInSubDataTable, $columnToSortByBeforeTruncation);
-
                 $depth--;
             } else {
                 $row->removeSubtable();
@@ -1242,13 +1249,17 @@ class DataTable implements DataTableInterface, \IteratorAggregate, \ArrayAccess
         // we then serialize the rows and store them in the serialized dataTable
         $rows = array();
         foreach ($this->rows as $id => $row) {
-            $rows[$id] = $row->toArray();
-            if (array_key_exists($id, $originalSubtableIds)) {
-                $row->subtableId = $originalSubtableIds[$id];
+            if (array_key_exists($id, $consecutiveSubtableIds)) {
+                $backup = $row->subtableId;
+                $row->subtableId = $consecutiveSubtableIds[$id];
+                $rows[$id] = $row->export();
+                $row->subtableId = $backup;
+            } else {
+                $rows[$id] = $row->export();
             }
         }
         if (isset($this->summaryRow)) {
-            $rows[self::ID_SUMMARY_ROW] = $this->summaryRow->toArray();
+            $rows[self::ID_SUMMARY_ROW] = $this->summaryRow->export();
         }
 
         $aSerializedDataTable[$forcedId] = serialize($rows);

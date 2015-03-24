@@ -13,7 +13,6 @@ use Piwik\API\ResponseBuilder;
 use Piwik\Archive;
 use Piwik\Common;
 use Piwik\DataTable\Row;
-use Piwik\DataTable\Manager as DataTableManager;
 use Piwik\DataTable;
 use Piwik\Date;
 use Piwik\Metrics;

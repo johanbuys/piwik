@@ -37,7 +37,6 @@ class Row extends \ArrayObject
     // @see sumRow - implementation detail
     public $maxVisitsSummed = 0;
 
-   // public $columns = array();
     private $metadata = array();
     public $subtableId = null;
     private $isSubtableLoaded = false;
@@ -78,7 +77,7 @@ class Row extends \ArrayObject
         }
     }
 
-    public function toArray()
+    public function export()
     {
         return array(
             0 => $this->getArrayCopy(), // self::COLUMNS
@@ -90,9 +89,11 @@ class Row extends \ArrayObject
     public function __wakeup()
     {
         if (isset($this['c'])) {
-            $this->metadata   = $this['c'][1];   // self::METADATA
-            $this->subtableId = $this['c'][3];   // self::DATATABLE_ASSOCIATED
-            $this->exchangeArray($this['c'][0]); // self::COLUMNS
+            $c = $this['c'];
+            unset($this['c']);
+            $this->metadata   = $c[1];   // self::METADATA
+            $this->subtableId = $c[3];   // self::DATATABLE_ASSOCIATED
+            $this->exchangeArray($c[0]); // self::COLUMNS
         }
     }
 
@@ -143,7 +144,8 @@ class Row extends \ArrayObject
      */
     public function deleteColumn($name)
     {
-        if (!isset($this[$name])) {
+        if (!isset($this[$name]) && !$this->offsetExists($name)) {
+            // we check for isset first as it is faster
             return false;
         }
 
@@ -314,7 +316,7 @@ class Row extends \ArrayObject
     public function removeSubtable()
     {
         $this->subtableId = null;
-        $this->isSubtableLoaded = null;
+        $this->isSubtableLoaded = false;
     }
 
     /**
