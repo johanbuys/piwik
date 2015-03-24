@@ -38,9 +38,9 @@ class Row extends \ArrayObject
     public $maxVisitsSummed = 0;
 
    // public $columns = array();
-    public $metadata = array();
+    private $metadata = array();
     public $subtableId = null;
-    public $subtableIsLoaded = false;
+    private $isSubtableLoaded = false;
 
     const COLUMNS = 0;
     const METADATA = 1;
@@ -102,10 +102,10 @@ class Row extends \ArrayObject
      */
     public function __destruct()
     {
-        if ($this->subtableIsLoaded) {
+        if ($this->isSubtableLoaded) {
             Manager::getInstance()->deleteTable($this->subtableId);
             $this->subtableId = null;
-            $this->subtableIsLoaded = false;
+            $this->isSubtableLoaded = false;
         }
     }
 
@@ -248,7 +248,7 @@ class Row extends \ArrayObject
      */
     public function getSubtable()
     {
-        if ($this->subtableIsLoaded) {
+        if ($this->isSubtableLoaded) {
             try {
                 return Manager::getInstance()->getTable($this->subtableId);
             } catch(TableNotFoundException $e) {
@@ -268,7 +268,7 @@ class Row extends \ArrayObject
      */
     public function sumSubtable(DataTable $subTable)
     {
-        if ($this->subtableIsLoaded) {
+        if ($this->isSubtableLoaded) {
             $thisSubTable = $this->getSubtable();
         } else {
             $this->warnIfSubtableAlreadyExists();
@@ -291,7 +291,7 @@ class Row extends \ArrayObject
     public function setSubtable(DataTable $subTable)
     {
         $this->subtableId = $subTable->getId();
-        $this->subtableIsLoaded = true;
+        $this->isSubtableLoaded = true;
 
         return $subTable;
     }
@@ -305,7 +305,7 @@ class Row extends \ArrayObject
     {
         // self::DATATABLE_ASSOCIATED are set as negative values,
         // as a flag to signify that the subtable is loaded in memory
-        return $this->subtableIsLoaded;
+        return $this->isSubtableLoaded;
     }
 
     /**
@@ -314,7 +314,7 @@ class Row extends \ArrayObject
     public function removeSubtable()
     {
         $this->subtableId = null;
-        $this->subtableIsLoaded = null;
+        $this->isSubtableLoaded = null;
     }
 
     /**

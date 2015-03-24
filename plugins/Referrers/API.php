@@ -451,7 +451,7 @@ class API extends \Piwik\Plugin\API
                 $i = 1; // start at one because idSubtable=0 is equivalent to idSubtable=false
                 foreach (Common::getSocialUrls() as $name) {
                     if ($name == $socialName) {
-                        $row->c[Row::DATATABLE_ASSOCIATED] = $i;
+                        $row->subtableId = $i;
                         break;
                     }
 
@@ -508,7 +508,7 @@ class API extends \Piwik\Plugin\API
             if ($typeReferrer != Common::REFERRER_TYPE_DIRECT_ENTRY) {
                 if (!$expanded) // if we don't want the expanded datatable, then don't do any extra queries
                 {
-                    $row->c[Row::DATATABLE_ASSOCIATED] = $typeReferrer;
+                    $row->subtableId = $typeReferrer;
                 } else // otherwise, we have to get the othe datatables
                 {
                     $subtable = $this->getReferrerType($idSite, $period, $date, $segment, $type = false,

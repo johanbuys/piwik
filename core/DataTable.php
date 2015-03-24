@@ -24,6 +24,7 @@ use ReflectionClass;
  * @see Common::destroy()
  */
 require_once PIWIK_INCLUDE_PATH . '/core/Common.php';
+require_once PIWIK_INCLUDE_PATH . "/core/DataTable/Bridges.php";
 
 /**
  * The primary data structure used to store analytics data in Piwik.
@@ -1268,12 +1269,12 @@ class DataTable implements DataTableInterface, \IteratorAggregate, \ArrayAccess
      */
     public function addRowsFromSerializedArray($stringSerialized)
     {
-        require_once PIWIK_INCLUDE_PATH . "/core/DataTable/Bridges.php";
-
         $serialized = unserialize($stringSerialized);
+
         if ($serialized === false) {
             throw new Exception("The unserialization has failed!");
         }
+
         $this->addRowsFromArray($serialized);
     }
 
