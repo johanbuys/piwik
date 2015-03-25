@@ -1281,10 +1281,17 @@ class DataTable implements DataTableInterface, \IteratorAggregate, \ArrayAccess
      */
     public function addRowsFromSerializedArray($stringSerialized)
     {
-        $serialized = unserialize($stringSerialized);
+        $serialized = @unserialize($stringSerialized);
 
         if ($serialized === false) {
-            throw new Exception("The unserialization has failed!");
+            $stringSerialized = str_replace(array('O:19:"Piwik\DataTable\Row"', 'O:19:"Piwik_DataTable_Row"'), 'O:29:"Piwik_DataTable_SerializedRow"', $stringSerialized);
+            $serialized = unserialize($stringSerialized);
+
+            if ($serialized === false || !isset($serialized->c)) {
+                throw new Exception("The unserialization has failed!");
+            }
+
+            $serialized = $serialized->c;
         }
 
         $this->addRowsFromArray($serialized);
