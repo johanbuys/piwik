@@ -144,8 +144,7 @@ class Row extends \ArrayObject
      */
     public function deleteColumn($name)
     {
-        if (!isset($this[$name]) && !$this->offsetExists($name)) {
-            // we check for isset first as it is faster
+        if (!$this->offsetExists($name)) {
             return false;
         }
 

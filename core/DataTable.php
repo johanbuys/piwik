@@ -1258,6 +1258,7 @@ class DataTable implements DataTableInterface, \IteratorAggregate, \ArrayAccess
                 $rows[$id] = $row->export();
             }
         }
+
         if (isset($this->summaryRow)) {
             $rows[self::ID_SUMMARY_ROW] = $this->summaryRow->export();
         }

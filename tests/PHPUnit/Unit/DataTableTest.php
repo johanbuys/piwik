@@ -398,8 +398,7 @@ class DataTableTest extends \PHPUnit_Framework_TestCase
          * create some fake tables to make sure that the serialized array of the first TABLE
          * does not take in consideration those tables
          */
-        $useless1 = new DataTable;
-        $useless1->addRowFromArray(array(Row::COLUMNS => array(13,),));
+        $useless1 = $this->createDataTable(array(array(13,)));
         /*
          * end fake tables
          */
@@ -410,7 +409,6 @@ class DataTableTest extends \PHPUnit_Framework_TestCase
         $table = new DataTable;
         $subtable = new DataTable;
         $idtable = $table->getId();
-        $idsubtable = $subtable->getId();
 
         /*
          * create some fake tables to make sure that the serialized array of the first TABLE
@@ -418,8 +416,7 @@ class DataTableTest extends \PHPUnit_Framework_TestCase
          * -> we check that the DataTable_Manager is not impacting DataTable
          */
         $useless1->addRowFromArray(array(Row::COLUMNS => array(8487,),));
-        $useless3 = new DataTable;
-        $useless3->addRowFromArray(array(Row::COLUMNS => array(8487,),));
+        $useless3 = $this->createDataTable(array(array(8487)));
         /*
          * end fake tables
          */
@@ -510,6 +507,96 @@ class DataTableTest extends \PHPUnit_Framework_TestCase
 
         $this->assertEquals($table, Manager::getInstance()->getTable($idtable));
         $this->assertEquals($subsubtable, Manager::getInstance()->getTable($idsubsubtable));
+    }
+
+    public function test_getSerialized_shouldCreateConsecutiveSubtableIds()
+    {
+        $numRowsInRoot = 10;
+        $numRowsInSubtables = 5;
+
+        $rootTable = new DataTable();
+        $this->addManyRows($rootTable, 100);
+
+        foreach ($rootTable->getRows() as $row) {
+            $subtable = new DataTable();
+            $this->addManyRows($subtable, 100);
+            $row->setSubtable($subtable);
+
+            foreach ($subtable->getRows() as $subRow) {
+                $subRow->setSubtable(new DataTable());
+            }
+        }
+
+        // we want to make sure the tables have high ids but we will ignore them and just give them Ids starting from 0
+        $recentId = Manager::getInstance()->getMostRecentTableId();
+        $this->assertGreaterThanOrEqual(5000, $recentId);
+
+        $tables = $rootTable->getSerialized($numRowsInRoot, $numRowsInSubtables);
+
+        // make sure subtableIds are consecutive. Why "-1"? Because if we want 10 rows, there will be 9 subtables + 1 summary row which won't have a subtable
+        $sumSubTables = ($numRowsInRoot - 1) + (($numRowsInRoot - 1) * ($numRowsInSubtables - 1));
+        $subtableIds  = array_keys($tables);
+        sort($subtableIds);
+        $this->assertEquals(range(0, $sumSubTables), $subtableIds);
+
+        // make sure the rows subtableId were updated as well.
+        foreach ($tables as $index => $serializedRows) {
+            $rows = unserialize($serializedRows);
+
+            if (0 === $index) {
+                // root table, make sure correct amount of rows are in subtables
+                $this->assertCount($numRowsInRoot, $rows);
+            }
+
+            foreach ($rows as $row) {
+                $subtableId = $row[Row::DATATABLE_ASSOCIATED];
+
+                if ($row[Row::COLUMNS]['label'] === DataTable::LABEL_SUMMARY_ROW) {
+                    $this->assertNull($subtableId);
+                } else {
+
+                    $this->assertLessThanOrEqual($sumSubTables, $subtableId); // make sure row was actually updated
+                    $this->assertGreaterThanOrEqual(0, $subtableId);
+                    $subrows = unserialize($tables[$subtableId]);
+
+                    // this way we make sure the rows point to the correct subtable. only 2nd level rows have actually
+                    // subtables. All 3rd level datatables do not have a row see table creation further above
+                    if ($index === 0) {
+                        $this->assertCount($numRowsInSubtables, $subrows);
+                    } else {
+                        $this->assertCount(0, $subrows);
+                    }
+                }
+            }
+        }
+    }
+
+    public function test_getSerialized_shouldExportOnlyTheSerializedArrayOfAllTableRows()
+    {
+        $rootTable = new DataTable();
+        $this->addManyRows($rootTable, 2);
+
+        foreach ($rootTable->getRows() as $row) {
+            $subtable = new DataTable();
+            $this->addManyRows($subtable, 2);
+            $row->setSubtable($subtable);
+        }
+
+        $tables = $rootTable->getSerialized();
+
+        // we also make sure it actually handles the subtableIds correct etc
+        $this->assertEquals(array(
+            0 => 'a:2:{i:0;a:3:{i:0;a:1:{s:5:"label";s:6:"label0";}i:1;a:0:{}i:3;i:1;}i:1;a:3:{i:0;a:1:{s:5:"label";s:6:"label1";}i:1;a:0:{}i:3;i:2;}}',
+            1 => 'a:2:{i:0;a:3:{i:0;a:1:{s:5:"label";s:6:"label0";}i:1;a:0:{}i:3;N;}i:1;a:3:{i:0;a:1:{s:5:"label";s:6:"label1";}i:1;a:0:{}i:3;N;}}',
+            2 => 'a:2:{i:0;a:3:{i:0;a:1:{s:5:"label";s:6:"label0";}i:1;a:0:{}i:3;N;}i:1;a:3:{i:0;a:1:{s:5:"label";s:6:"label1";}i:1;a:0:{}i:3;N;}}',
+        ), $tables);
+    }
+
+    private function addManyRows(DataTable $table, $numRows)
+    {
+        for ($i = 0; $i < $numRows; $i++) {
+            $table->addRowFromArray(array(Row::COLUMNS => array('label' => 'label' . $i)));
+        }
     }
 
     /**
@@ -760,6 +847,16 @@ class DataTableTest extends \PHPUnit_Framework_TestCase
 
         // - the serialized string does NOT contain the id subtable (the row was cleaned up as expected)
         $this->assertNull($unserialized[0][3], "found the id sub table in the serialized, not expected");
+    }
+
+    private function createDataTable($rows)
+    {
+        $useless1 = new DataTable;
+        foreach ($rows as $row) {
+            $useless1->addRowFromArray(array(Row::COLUMNS => $row));
+        }
+
+        return $useless1;
     }
 
     protected function _getDataTable1ForTest()
